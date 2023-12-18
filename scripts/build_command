@@ -1,0 +1,19 @@
+# Windows 下 SSUG 的构建命令
+# 进入 SSUG 根目录将命令复制到 Powershell 中运行
+# 可构建出 windows amd64 和 linux amd64 的版本
+# 如果没有 git 工具和 .git 文件夹可能会报错，去除相关的命令即可
+# 首次构建需要使用 go mod tidy 下载依赖
+
+$env:GOARCH = "amd64"
+$env:GOOS = "windows"
+
+$VERSION = (git describe --tags --abbrev=0)
+$LD_FLAGS="-w -s -X ssug/internal/base.Version=$VERSION"
+go build -o "./bin/ssug_windows_amd64.exe" -trimpath -ldflags "$LD_FLAGS" ./
+
+$env:GOARCH = "amd64"
+$env:GOOS = "linux"
+
+$VERSION = (git describe --tags --abbrev=0)
+$LD_FLAGS="-w -s -X ssug/internal/base.Version=$VERSION"
+go build -o "./bin/ssug_linux_amd64" -trimpath -ldflags "$LD_FLAGS" ./
