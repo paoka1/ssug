@@ -55,6 +55,6 @@ class SSUG:
 
 if __name__ == "__main__":
     # 使用默认配置
-    ssug = SSUG("key123456", "http://127.0.0.1:8000", "http://127.0.0.1:8000")
+    ssug = SSUG("key123456", "http://127.0.0.1:8000/", "http://127.0.0.1:8000/")
     # 获取短链接
     print(ssug.get_short("https://www.bilibili.com/video/BV1hq4y1s7VH"))
