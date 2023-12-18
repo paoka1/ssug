@@ -19,6 +19,9 @@ func SetInitLen(len int) {
 	}
 }
 
+// GenValue 生成短链
+// 参数：原始链接
+// 返回值：短链
 func GenValue(key string) string {
 	timesTotal := 1
 	times := 1

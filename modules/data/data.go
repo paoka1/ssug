@@ -13,6 +13,9 @@ var (
 	Redirect redirect
 )
 
+// redirectCache 原始链接 -> 短链
+// timeExpirationCache 短链 -> 过期时间
+// ttl 短链存活时长，单位秒
 type redirect struct {
 	l                   *sync.Mutex
 	accessKey           string
@@ -41,6 +44,7 @@ func (r *redirect) Init(key string, ttl int64) {
 	}
 }
 
+// GetKey 获取 accessKey
 func (r *redirect) GetKey() string {
 	return r.accessKey
 }
@@ -49,7 +53,9 @@ func (r *redirect) Close() {
 	r.db.close()
 }
 
-// AddMapping 添加新的映射，原始链接（key）->短链（value）
+// AddMapping 添加新的映射
+// 参数：key 原始链接，value 短链
+// 返回值：err，原始链接，短链
 func (r *redirect) AddMapping(key string, value string) (error, string, string) {
 	r.l.Lock()
 	defer r.l.Unlock()
@@ -57,6 +63,7 @@ func (r *redirect) AddMapping(key string, value string) (error, string, string) 
 	if ok {
 		return errors.New("短链映射已存在"), key, v
 	}
+	// t 短链过期时间
 	t := time.Now().Unix() + r.ttl
 	err := r.db.addMapping(t, key, value)
 	if err != nil {
@@ -68,6 +75,8 @@ func (r *redirect) AddMapping(key string, value string) (error, string, string) 
 }
 
 // RemoveRCacheMapping 去除缓存 redirectCache 映射
+// 参数 key：原始链接
+// 返回值：操作是否成功，原始链接，短链
 func (r *redirect) RemoveRCacheMapping(key string) (bool, string, string) {
 	r.l.Lock()
 	defer r.l.Unlock()
@@ -81,6 +90,8 @@ func (r *redirect) RemoveRCacheMapping(key string) (bool, string, string) {
 }
 
 // RemoveTCacheMapping 去除缓存 timeExpirationCache 映射
+// 参数 key：短链
+// 返回值：操作是否成功，短链，短链过期时间
 func (r *redirect) RemoveTCacheMapping(key string) (bool, string, int64) {
 	r.l.Lock()
 	defer r.l.Unlock()
@@ -93,7 +104,9 @@ func (r *redirect) RemoveTCacheMapping(key string) (bool, string, int64) {
 	}
 }
 
-// RemovingDBMapping 去除数据库里的映射
+// RemovingDBMapping 去除数据库里过期的的映射
+// 参数：time 应为操作时的时间戳
+// 返回值：删除的映射（原始链接 -> 短链）
 func (r *redirect) RemovingDBMapping(time int64) map[string]string {
 	data, _ := r.db.getRemove(time)
 	_ = r.db.autoRemove(time)
@@ -104,7 +117,9 @@ func (r *redirect) RemovingDBMapping(time int64) map[string]string {
 	return ret
 }
 
-// GetMappingKey 根据短链（value）获取原始链接（key）
+// GetMappingKey 获取短链对应的原始链接
+// 参数：短链
+// 返回值：err，原始链接，短链
 func (r *redirect) GetMappingKey(value string) (error, string, string) {
 	r.l.Lock()
 	defer r.l.Unlock()
@@ -129,7 +144,9 @@ func (r *redirect) GetMappingKey(value string) (error, string, string) {
 	}
 }
 
-// GetMappingValue 根据原始链接（key）获取短链（value）
+// GetMappingValue 获取原始链接对应的短链
+// 参数：原始链接
+// 返回值：err，原始链接，短链
 func (r *redirect) GetMappingValue(key string) (error, string, string) {
 	r.l.Lock()
 	defer r.l.Unlock()
@@ -144,7 +161,9 @@ func (r *redirect) GetMappingValue(key string) (error, string, string) {
 	return nil, key, m.Value
 }
 
-// HasKey 是否存在原始链接（key）
+// HasKey 是否存在原始链接
+// 参数：原始链接
+// 返回值：bool
 func (r *redirect) HasKey(key string) bool {
 	r.l.Lock()
 	defer r.l.Unlock()
@@ -155,7 +174,9 @@ func (r *redirect) HasKey(key string) bool {
 	return r.db.hasKey(key)
 }
 
-// HasValue 是否存在短链（value）
+// HasValue 是否存在短链
+// 参数：短链
+// 返回值：bool
 func (r *redirect) HasValue(value string) bool {
 	r.l.Lock()
 	defer r.l.Unlock()
@@ -169,6 +190,7 @@ func (r *redirect) HasValue(value string) bool {
 }
 
 // GetCacheMappingKV 获取缓存中所有 KV
+// 返回值：原始链接 -> 短链
 func (r *redirect) GetCacheMappingKV() map[string]string {
 	r.l.Lock()
 	defer r.l.Unlock()
@@ -180,6 +202,8 @@ func (r *redirect) GetCacheMappingKV() map[string]string {
 }
 
 // GetCacheTimeMapping 获取缓存中短链过期的时间
+// 参数：短链
+// 返回值：过期时间
 func (r *redirect) GetCacheTimeMapping(key string) int64 {
 	r.l.Lock()
 	defer r.l.Unlock()

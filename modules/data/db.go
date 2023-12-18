@@ -53,6 +53,8 @@ func (d *database) close() {
 	_ = d.db.Close()
 }
 
+// 向数据库添加短链映射
+// 参数：time 过期的时间戳，key 原始链接，value 短链
 func (d *database) addMapping(time int64, key string, value string) error {
 	insSQL := "INSERT INTO %s VALUES (?, ?, ?);"
 	stm, err := d.db.Prepare(fmt.Sprintf(insSQL, d.name))
@@ -69,6 +71,7 @@ func (d *database) addMapping(time int64, key string, value string) error {
 	return nil
 }
 
+// 在数据库里使用短链获取原始链接
 func (d *database) getMappingByV(value string) (error, mapping) {
 	var m mapping
 	getSQL := "SELECT * FROM %s WHERE VALUE = ?;"
@@ -86,6 +89,7 @@ func (d *database) getMappingByV(value string) (error, mapping) {
 	return nil, m
 }
 
+// 在数据库里使用原始链接获取短链
 func (d *database) getMappingByK(key string) (error, mapping) {
 	var m mapping
 	getSQL := "SELECT * FROM %s WHERE KEY = ?;"
@@ -103,6 +107,7 @@ func (d *database) getMappingByK(key string) (error, mapping) {
 	return nil, m
 }
 
+// 检测数据库里是否存在该原始链接
 func (d *database) hasKey(key string) bool {
 	hasSQL := "SELECT * FROM %s WHERE KEY = ?;"
 	stm, err := d.db.Prepare(fmt.Sprintf(hasSQL, d.name))
@@ -125,6 +130,7 @@ func (d *database) hasKey(key string) bool {
 	return true
 }
 
+// 检测数据库里是否存在该短链
 func (d *database) hasValue(value string) bool {
 	hasSQL := "SELECT * FROM %s WHERE VALUE = ?;"
 	stm, err := d.db.Prepare(fmt.Sprintf(hasSQL, d.name))
@@ -147,6 +153,8 @@ func (d *database) hasValue(value string) bool {
 	return true
 }
 
+// 获取数据库里过期的映射
+// 参数 time 为某时刻的时间戳
 func (d *database) getRemove(time int64) ([]mapping, error) {
 	var ms []mapping
 	qSQL := "SELECT * FROM %s WHERE EXPIRATIONTIME <= ?;"
@@ -169,6 +177,8 @@ func (d *database) getRemove(time int64) ([]mapping, error) {
 	return ms, nil
 }
 
+// 删除数据库里过期的映射
+// 参数 time 为某时刻的时间戳
 func (d *database) autoRemove(time int64) error {
 	delSQL := "DELETE FROM %s WHERE EXPIRATIONTIME <= ?;"
 	stm, err := d.db.Prepare(fmt.Sprintf(delSQL, d.name))
