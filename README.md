@@ -4,7 +4,7 @@ Shauio's short URL generator，短链接服务API，使用Golang实现，使用S
 
 ### 使用SSUG
 
-在[Releases](https://github.com/paoka1/ssug/releases)中下载对应架构的最新版本或自己构建，命令行参数：
+在[Releases](https://github.com/paoka1/ssug/releases)中下载对应架构的最新版本或自己[构建](scripts/build_command)，命令行参数：
 
 1. -host：监听的地址，默认127.0.0.1
 2. -key：访问管理接口的密钥，默认key123456
