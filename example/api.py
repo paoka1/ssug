@@ -1,5 +1,22 @@
+import time
 import requests
+
 from urllib.parse import urljoin
+
+
+class ShortURL:
+    """
+    短链实例
+    """
+
+    def __init__(self, ori_url: str, short_url: str, expire_time: int) -> None:
+        self.ori_url = ori_url
+        self.short_url = short_url
+        self.expire_time = expire_time
+
+    def __str__(self) -> str:
+        expire_t = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.expire_time))
+        return f"{self.short_url} -> {self.ori_url}, 将于{expire_t}过期"
 
 
 class SSUG:
@@ -17,7 +34,7 @@ class SSUG:
         self.__acc_key = acc_key
         self.__ssug_url = ssug_url
 
-    def __get_sl(self, url: str) -> str:
+    def __get_sl(self, url: str) -> dict:
         """
         获取短链接
         """
@@ -30,15 +47,15 @@ class SSUG:
             raise Exception("获取短链接失败：" + r.json()["msg"])
         return r.json()["data"]
 
-    def get_short(self, url: str) -> str:
+    def get_short(self, url: str) -> ShortURL:
         """
         获取短链接
         """
         try:
-            sl = self.__get_sl(url)
+            data = self.__get_sl(url)
         except Exception as e:
             raise e
-        return urljoin(self.__ssug_url, sl)
+        return ShortURL(url, urljoin(self.__ssug_url, data["short_url"]), data["expiration_time"])
 
     def is_running(self) -> bool:
         """
