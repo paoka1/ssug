@@ -19,30 +19,28 @@ func SetInitLen(len int) {
 	}
 }
 
-// GenValue 生成短链
-// 参数：原始链接
-// 返回值：短链
-func GenValue(key string) string {
+// GenValue 根据原始链接生成短链
+func GenValue(originalURL string) string {
 	timesTotal := 1
 	times := 1
 	nowLen := initLen
-	initKey := key
-	md5 := utils.CalculateMD5(key)
-	ok := data.Redirect.HasValue(md5[:nowLen])
+	initKey := originalURL
+	md5 := utils.CalculateMD5(originalURL)
+	ok := data.Redirect.HasShortURL(md5[:nowLen])
 	for ok {
-		key += "z"
+		originalURL += "z"
 		if times > 3 {
 			nowLen++
 			times = 0
-			key = initKey
+			originalURL = initKey
 		}
-		md5 = utils.CalculateMD5(key)
-		ok = data.Redirect.HasValue(md5[:nowLen])
+		md5 = utils.CalculateMD5(originalURL)
+		ok = data.Redirect.HasShortURL(md5[:nowLen])
 		times++
 		timesTotal++
 	}
 	if base.Debug {
-		utils.Logger.Info(fmt.Sprintf("生成%s短链%s，长度%d，消耗次数%d", key, md5[:nowLen], nowLen, timesTotal))
+		utils.Logger.Info(fmt.Sprintf("生成%s，短链：%s，长度：%d，消耗次数：%d", originalURL, md5[:nowLen], nowLen, timesTotal))
 	}
 	return md5[:nowLen]
 }

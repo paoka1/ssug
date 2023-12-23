@@ -14,22 +14,20 @@ func AddMapping(c *gin.Context) {
 		return
 	}
 
-	url := c.DefaultPostForm("url", "")
-	v, err := handlers.AddMappingHandler(url)
+	originalURL := c.DefaultPostForm("url", "")
+	v, err := handlers.AddMappingHandler(originalURL)
 	if err != nil {
-		c.JSON(403, utils.ResultFailD(403, err.Error(), v))
-		return
+		c.JSON(403, utils.ResultFailWD(403, err.Error(), v))
 	} else {
 		c.JSON(200, utils.ResultSuccess(v))
 	}
 }
 
 func GetMapping(c *gin.Context) {
-	value := c.Param("value")
-	url, err := handlers.GetMappingHandler(value)
+	shortURL := c.Param("short")
+	url, err := handlers.GetMappingHandler(shortURL)
 	if err != nil {
 		c.JSON(403, utils.ResultFail(403, err.Error()))
-		return
 	} else {
 		c.Redirect(302, url)
 	}

@@ -9,37 +9,33 @@ import (
 )
 
 // AddMappingHandler 处理添加短链请求
-// 参数：原始链接
-// 返回值：短链，err
-func AddMappingHandler(key string) (string, error) {
-	if !utils.IsURL(key) {
-		return "", errors.New("添加映射失败，URL非法")
+func AddMappingHandler(originalURL string) (data.Mapping, error) {
+	if !utils.IsURL(originalURL) {
+		return data.Mapping{}, errors.New("添加映射失败，URL非法")
 	}
-	ok := data.Redirect.HasKey(key)
+	ok := data.Redirect.HasOriginalURL(originalURL)
 	if ok {
-		_, _, v := data.Redirect.GetMappingValue(key)
-		utils.Logger.Info(fmt.Sprintf("添加映射%s -> %s失败，映射已存在", key, v))
-		return v, errors.New("添加失败，映射已存在")
+		m, _ := data.Redirect.GetMappingFO(originalURL)
+		utils.Logger.Info(fmt.Sprintf("添加映射%s -> %s失败，映射已存在", m.ShortURL, m.OriginalURL))
+		return m, errors.New("添加失败，映射已存在")
 	}
-	value := base.GenValue(key)
-	err, k, v := data.Redirect.AddMapping(key, value)
+	shortURL := base.GenValue(originalURL)
+	m, err := data.Redirect.AddMapping(originalURL, shortURL)
 	if err == nil {
-		utils.Logger.Info(fmt.Sprintf("成功添加映射%s -> %s", k, v))
-		return v, nil
+		utils.Logger.Info(fmt.Sprintf("成功添加映射%s -> %s", m.ShortURL, m.OriginalURL))
+		return m, nil
 	} else {
 		utils.Logger.Warning(err)
-		return v, err
+		return data.Mapping{}, err
 	}
 }
 
 // GetMappingHandler 处理原始链接获取请求
-// 参数：短链
-// 返回值：原始链接，err
-func GetMappingHandler(value string) (string, error) {
-	if !utils.IsLegalValue(value) {
-		return "", errors.New("查询映射失败，value非法")
+func GetMappingHandler(shortURL string) (string, error) {
+	if !utils.IsLegalValue(shortURL) {
+		return "", errors.New("查询映射失败，短链非法")
 	}
-	err, k, _ := data.Redirect.GetMappingKey(value)
+	k, err := data.Redirect.GetMappingO(shortURL)
 	if err == nil {
 		return k, nil
 	} else {

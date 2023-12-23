@@ -31,10 +31,9 @@ func (d *database) open() (*sql.DB, error) {
 		return db, errors.New("open sqlite error " + err.Error())
 	}
 	createSql := "CREATE TABLE IF NOT EXISTS %s (" +
-		"KEY VARCHAR(255) PRIMARY KEY," +
-		"VALUE VARCHAR(255)," +
-		"EXPIRATIONTIME INT" +
-		");"
+		"SHORTURL VARCHAR(255) PRIMARY KEY, " +
+		"ORIGINALURL VARCHAR(255), " +
+		"EXPIRATIONTIME INT);"
 	stm, err := db.Prepare(fmt.Sprintf(createSql, d.name))
 	if err != nil {
 		return nil, errors.New("create sqlite table error " + err.Error())
@@ -54,8 +53,7 @@ func (d *database) close() {
 }
 
 // 向数据库添加短链映射
-// 参数：time 过期的时间戳，key 原始链接，value 短链
-func (d *database) addMapping(time int64, key string, value string) error {
+func (d *database) addMapping(m Mapping) error {
 	insSQL := "INSERT INTO %s VALUES (?, ?, ?);"
 	stm, err := d.db.Prepare(fmt.Sprintf(insSQL, d.name))
 	if err != nil {
@@ -64,7 +62,7 @@ func (d *database) addMapping(time int64, key string, value string) error {
 	defer func(stm *sql.Stmt) {
 		_ = stm.Close()
 	}(stm)
-	_, err = stm.Exec(key, value, time)
+	_, err = stm.Exec(m.ShortURL, m.OriginalURL, m.ExpirationTime)
 	if err != nil {
 		return err
 	}
@@ -72,44 +70,44 @@ func (d *database) addMapping(time int64, key string, value string) error {
 }
 
 // 在数据库里使用短链获取原始链接
-func (d *database) getMappingByV(value string) (error, mapping) {
-	var m mapping
-	getSQL := "SELECT * FROM %s WHERE VALUE = ?;"
+func (d *database) getMappingByS(shortURL string) (Mapping, error) {
+	var m Mapping
+	getSQL := "SELECT * FROM %s WHERE SHORTURL = ?;"
 	stm, err := d.db.Prepare(fmt.Sprintf(getSQL, d.name))
 	if err != nil {
-		return err, m
+		return m, err
 	}
 	defer func(stm *sql.Stmt) {
 		_ = stm.Close()
 	}(stm)
-	err = stm.QueryRow(value).Scan(&m.Key, &m.Value, &m.ExpirationTime)
+	err = stm.QueryRow(shortURL).Scan(&m.ShortURL, &m.OriginalURL, &m.ExpirationTime)
 	if err != nil {
-		return err, m
+		return m, err
 	}
-	return nil, m
+	return m, err
 }
 
 // 在数据库里使用原始链接获取短链
-func (d *database) getMappingByK(key string) (error, mapping) {
-	var m mapping
-	getSQL := "SELECT * FROM %s WHERE KEY = ?;"
+func (d *database) getMappingByO(originalURL string) (Mapping, error) {
+	var m Mapping
+	getSQL := "SELECT * FROM %s WHERE ORIGINALURL = ?;"
 	stm, err := d.db.Prepare(fmt.Sprintf(getSQL, d.name))
 	if err != nil {
-		return err, m
+		return m, err
 	}
 	defer func(stm *sql.Stmt) {
 		_ = stm.Close()
 	}(stm)
-	err = stm.QueryRow(key).Scan(&m.Key, &m.Value, &m.ExpirationTime)
+	err = stm.QueryRow(originalURL).Scan(&m.ShortURL, &m.OriginalURL, &m.ExpirationTime)
 	if err != nil {
-		return err, m
+		return m, err
 	}
-	return nil, m
+	return m, err
 }
 
 // 检测数据库里是否存在该原始链接
-func (d *database) hasKey(key string) bool {
-	hasSQL := "SELECT * FROM %s WHERE KEY = ?;"
+func (d *database) hasOriginalURL(originalURL string) bool {
+	hasSQL := "SELECT * FROM %s WHERE ORIGINALURL = ?;"
 	stm, err := d.db.Prepare(fmt.Sprintf(hasSQL, d.name))
 	if err != nil {
 		return false
@@ -117,7 +115,7 @@ func (d *database) hasKey(key string) bool {
 	defer func(stm *sql.Stmt) {
 		_ = stm.Close()
 	}(stm)
-	rows, err := stm.Query(key)
+	rows, err := stm.Query(originalURL)
 	if err != nil {
 		return false
 	}
@@ -131,8 +129,8 @@ func (d *database) hasKey(key string) bool {
 }
 
 // 检测数据库里是否存在该短链
-func (d *database) hasValue(value string) bool {
-	hasSQL := "SELECT * FROM %s WHERE VALUE = ?;"
+func (d *database) hasShortURL(shortURL string) bool {
+	hasSQL := "SELECT * FROM %s WHERE SHORTURL = ?;"
 	stm, err := d.db.Prepare(fmt.Sprintf(hasSQL, d.name))
 	if err != nil {
 		return false
@@ -140,7 +138,7 @@ func (d *database) hasValue(value string) bool {
 	defer func(stm *sql.Stmt) {
 		_ = stm.Close()
 	}(stm)
-	rows, err := stm.Query(value)
+	rows, err := stm.Query(shortURL)
 	if err != nil {
 		return false
 	}
@@ -155,8 +153,8 @@ func (d *database) hasValue(value string) bool {
 
 // 获取数据库里过期的映射
 // 参数 time 为某时刻的时间戳
-func (d *database) getRemove(time int64) ([]mapping, error) {
-	var ms []mapping
+func (d *database) getRemove(time int64) ([]Mapping, error) {
+	var ms []Mapping
 	qSQL := "SELECT * FROM %s WHERE EXPIRATIONTIME <= ?;"
 	stm, err := d.db.Prepare(fmt.Sprintf(qSQL, d.name))
 	if err != nil {
@@ -170,8 +168,8 @@ func (d *database) getRemove(time int64) ([]mapping, error) {
 		return ms, err
 	}
 	for rows.Next() {
-		var m mapping
-		_ = rows.Scan(&m.Key, &m.Value, &m.ExpirationTime)
+		var m Mapping
+		_ = rows.Scan(&m.ShortURL, &m.OriginalURL, &m.ExpirationTime)
 		ms = append(ms, m)
 	}
 	return ms, nil

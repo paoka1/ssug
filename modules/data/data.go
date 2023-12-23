@@ -54,159 +54,153 @@ func (r *redirect) Close() {
 }
 
 // AddMapping 添加新的映射
-// 参数：key 原始链接，value 短链
-// 返回值：err，原始链接，短链
-func (r *redirect) AddMapping(key string, value string) (error, string, string) {
+func (r *redirect) AddMapping(originalURL string, shortURL string) (Mapping, error) {
 	r.l.Lock()
 	defer r.l.Unlock()
-	v, ok := r.redirectCache[key]
+	su, ok := r.redirectCache[originalURL]
 	if ok {
-		return errors.New("短链映射已存在"), key, v
+		t, _ := r.timeExpirationCache[su]
+		return Mapping{su, originalURL, t}, errors.New("短链映射已存在")
 	}
 	// t 短链过期时间
 	t := time.Now().Unix() + r.ttl
-	err := r.db.addMapping(t, key, value)
+	err := r.db.addMapping(Mapping{shortURL, originalURL, t})
 	if err != nil {
-		return err, key, v
+		m, _ := r.db.getMappingByS(shortURL)
+		return m, err
 	}
-	r.timeExpirationCache[value] = t
-	r.redirectCache[key] = value
-	return nil, key, value
+	r.timeExpirationCache[shortURL] = t
+	r.redirectCache[originalURL] = shortURL
+	return Mapping{shortURL, originalURL, t}, nil
 }
 
-// RemoveRCacheMapping 去除缓存 redirectCache 映射
-// 参数 key：原始链接
-// 返回值：操作是否成功，原始链接，短链
-func (r *redirect) RemoveRCacheMapping(key string) (bool, string, string) {
+// RemoveRCacheMapping 去除缓存 redirectCache 映射，返回删除的映射的短链
+func (r *redirect) RemoveRCacheMapping(originalURL string) (bool, string) {
 	r.l.Lock()
 	defer r.l.Unlock()
-	v, ok := r.redirectCache[key]
+	su, ok := r.redirectCache[originalURL]
 	if ok {
-		delete(r.redirectCache, key)
-		return true, key, v
+		delete(r.redirectCache, originalURL)
+		return true, su
 	} else {
-		return false, key, ""
+		return false, ""
 	}
 }
 
-// RemoveTCacheMapping 去除缓存 timeExpirationCache 映射
-// 参数 key：短链
-// 返回值：操作是否成功，短链，短链过期时间
-func (r *redirect) RemoveTCacheMapping(key string) (bool, string, int64) {
+// RemoveTCacheMapping 去除缓存 timeExpirationCache 映射，返回删除的映射的过期时间
+func (r *redirect) RemoveTCacheMapping(shortURL string) (bool, int64) {
 	r.l.Lock()
 	defer r.l.Unlock()
-	v, ok := r.timeExpirationCache[key]
+	t, ok := r.timeExpirationCache[shortURL]
 	if ok {
-		delete(r.timeExpirationCache, key)
-		return true, key, v
+		delete(r.timeExpirationCache, shortURL)
+		return true, t
 	} else {
-		return false, key, 0
+		return false, 0
 	}
 }
 
 // RemovingDBMapping 去除数据库里过期的的映射
-// 参数：time 应为操作时的时间戳
-// 返回值：删除的映射（原始链接 -> 短链）
-func (r *redirect) RemovingDBMapping(time int64) map[string]string {
+func (r *redirect) RemovingDBMapping(time int64) []Mapping {
+	r.l.Lock()
+	defer r.l.Unlock()
 	data, _ := r.db.getRemove(time)
 	_ = r.db.autoRemove(time)
-	ret := make(map[string]string)
-	for _, m := range data {
-		ret[m.Key] = m.Value
-	}
-	return ret
+	return data
 }
 
-// GetMappingKey 获取短链对应的原始链接
-// 参数：短链
-// 返回值：err，原始链接，短链
-func (r *redirect) GetMappingKey(value string) (error, string, string) {
+// GetMappingFO 通过原始链接获取映射
+func (r *redirect) GetMappingFO(originalURL string) (Mapping, error) {
 	r.l.Lock()
 	defer r.l.Unlock()
-	for k, v := range r.redirectCache {
-		if v == value {
-			if base.Debug {
-				utils.Logger.Info(fmt.Sprintf("从缓存查找到%s -> %s", k, v))
-			}
-			return nil, k, v
-		}
-	}
-	err, m := r.db.getMappingByV(value)
-	if err != nil {
-		return err, "", value
-	} else {
-		r.timeExpirationCache[m.Value] = m.ExpirationTime
-		r.redirectCache[m.Key] = m.Value
-		if base.Debug {
-			utils.Logger.Info(fmt.Sprintf("从数据库查找到%s -> %s", m.Key, m.Value))
-		}
-		return nil, m.Key, value
-	}
-}
-
-// GetMappingValue 获取原始链接对应的短链
-// 参数：原始链接
-// 返回值：err，原始链接，短链
-func (r *redirect) GetMappingValue(key string) (error, string, string) {
-	r.l.Lock()
-	defer r.l.Unlock()
-	v, ok := r.redirectCache[key]
+	su, ok := r.redirectCache[originalURL]
 	if ok {
-		return nil, key, v
+		t, _ := r.timeExpirationCache[su]
+		return Mapping{su, originalURL, t}, nil
 	}
-	err, m := r.db.getMappingByK(key)
-	if err != nil {
-		return err, key, ""
-	}
-	return nil, key, m.Value
+	m, err := r.db.getMappingByO(originalURL)
+	return m, err
 }
 
-// HasKey 是否存在原始链接
-// 参数：原始链接
-// 返回值：bool
-func (r *redirect) HasKey(key string) bool {
+// GetMappingO 获取短链对应的原始链接
+func (r *redirect) GetMappingO(shortURL string) (string, error) {
 	r.l.Lock()
 	defer r.l.Unlock()
-	_, ok := r.redirectCache[key]
+	for ou, su := range r.redirectCache {
+		if su == shortURL {
+			if base.Debug {
+				utils.Logger.Info(fmt.Sprintf("从缓存查找到%s -> %s", su, ou))
+			}
+			return ou, nil
+		}
+	}
+	m, err := r.db.getMappingByS(shortURL)
+	if err != nil {
+		return "", err
+	} else {
+		// 添加缓存
+		r.timeExpirationCache[m.ShortURL] = m.ExpirationTime
+		r.redirectCache[m.OriginalURL] = m.ShortURL
+		if base.Debug {
+			utils.Logger.Info(fmt.Sprintf("从数据库查找到%s -> %s", m.ShortURL, m.OriginalURL))
+		}
+		return m.OriginalURL, nil
+	}
+}
+
+// GetMappingS 获取原始链接对应的短链
+func (r *redirect) GetMappingS(originalURL string) (string, error) {
+	r.l.Lock()
+	defer r.l.Unlock()
+	su, ok := r.redirectCache[originalURL]
+	if ok {
+		return su, nil
+	}
+	m, err := r.db.getMappingByO(originalURL)
+	if err != nil {
+		return "", err
+	}
+	return m.ShortURL, nil
+}
+
+// HasOriginalURL 是否存在原始链接
+func (r *redirect) HasOriginalURL(originalURL string) bool {
+	r.l.Lock()
+	defer r.l.Unlock()
+	_, ok := r.redirectCache[originalURL]
 	if ok {
 		return true
 	}
-	return r.db.hasKey(key)
+	return r.db.hasOriginalURL(originalURL)
 }
 
-// HasValue 是否存在短链
-// 参数：短链
-// 返回值：bool
-func (r *redirect) HasValue(value string) bool {
+// HasShortURL 是否存在短链
+func (r *redirect) HasShortURL(shortURL string) bool {
 	r.l.Lock()
 	defer r.l.Unlock()
-	for _, v := range r.redirectCache {
-		if v == value {
+	for _, su := range r.redirectCache {
+		if su == shortURL {
 			return true
 		}
 	}
-	ok := r.db.hasValue(value)
-	return ok
+	return r.db.hasShortURL(shortURL)
 }
 
-// GetCacheMappingKV 获取缓存中所有 KV
-// 返回值：原始链接 -> 短链
+// GetCacheMappingKV 获取缓存中所有 KV，返回值：原始链接 -> 短链
 func (r *redirect) GetCacheMappingKV() map[string]string {
 	r.l.Lock()
 	defer r.l.Unlock()
 	kv := make(map[string]string)
-	for k, v := range r.redirectCache {
-		kv[k] = v
+	for ou, su := range r.redirectCache {
+		kv[ou] = su
 	}
 	return kv
 }
 
 // GetCacheTimeMapping 获取缓存中短链过期的时间
-// 参数：短链
-// 返回值：过期时间
-func (r *redirect) GetCacheTimeMapping(key string) int64 {
+func (r *redirect) GetCacheTimeMapping(shortURL string) int64 {
 	r.l.Lock()
 	defer r.l.Unlock()
-	v, _ := r.timeExpirationCache[key]
+	v, _ := r.timeExpirationCache[shortURL]
 	return v
 }

@@ -28,7 +28,7 @@ func Main() {
 
 	g := gin.Default()
 	g.POST("/add", api.AddMapping)
-	g.GET("/:value", api.GetMapping)
+	g.GET("/:short", api.GetMapping)
 	g.GET("/", api.Happy)
 	g.POST("/", api.Happy)
 

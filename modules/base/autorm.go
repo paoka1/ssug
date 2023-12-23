@@ -2,6 +2,7 @@ package base
 
 import (
 	"fmt"
+	"ssug/internal/base"
 	"ssug/internal/utils"
 	"ssug/modules/data"
 	"time"
@@ -24,16 +25,22 @@ func RemoveExp() {
 
 func remove() {
 	tn := time.Now().Unix()
-	for k, v := range data.Redirect.GetCacheMappingKV() {
-		t := data.Redirect.GetCacheTimeMapping(v)
-		if tn >= t && k != "" {
-			_, _, _ = data.Redirect.RemoveRCacheMapping(k)
-			_, _, _ = data.Redirect.RemoveTCacheMapping(v)
-			utils.Logger.Info(fmt.Sprintf("移除缓存映射%s -> %s，存活时间结束", k, v))
+	for ou, su := range data.Redirect.GetCacheMappingKV() {
+		t := data.Redirect.GetCacheTimeMapping(su)
+		if tn >= t && ou != "" {
+			_, _ = data.Redirect.RemoveRCacheMapping(ou)
+			_, _ = data.Redirect.RemoveTCacheMapping(su)
+			if base.Debug {
+				utils.Logger.Info(fmt.Sprintf("移除缓存映射%s -> %s，存活时间结束", su, ou))
+			}
 		}
 	}
 	dataRm := data.Redirect.RemovingDBMapping(tn)
-	for k, v := range dataRm {
-		utils.Logger.Info(fmt.Sprintf("移除数据库映射%s -> %s，存活时间结束", k, v))
+	for _, m := range dataRm {
+		if base.Debug {
+			utils.Logger.Info(fmt.Sprintf("移除数据库映射%s -> %s，存活时间结束", m.ShortURL, m.OriginalURL))
+		} else {
+			utils.Logger.Info(fmt.Sprintf("移除映射%s -> %s，存活时间结束", m.ShortURL, m.OriginalURL))
+		}
 	}
 }
