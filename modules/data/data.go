@@ -75,28 +75,28 @@ func (r *redirect) AddMapping(originalURL string, shortURL string) (Mapping, err
 }
 
 // RemoveRCacheMapping 去除缓存 redirectCache 映射，返回删除的映射的短链
-func (r *redirect) RemoveRCacheMapping(originalURL string) (bool, string) {
+func (r *redirect) RemoveRCacheMapping(originalURL string) (string, bool) {
 	r.l.Lock()
 	defer r.l.Unlock()
 	su, ok := r.redirectCache[originalURL]
 	if ok {
 		delete(r.redirectCache, originalURL)
-		return true, su
+		return su, true
 	} else {
-		return false, ""
+		return "", false
 	}
 }
 
 // RemoveTCacheMapping 去除缓存 timeExpirationCache 映射，返回删除的映射的过期时间
-func (r *redirect) RemoveTCacheMapping(shortURL string) (bool, int64) {
+func (r *redirect) RemoveTCacheMapping(shortURL string) (int64, bool) {
 	r.l.Lock()
 	defer r.l.Unlock()
 	t, ok := r.timeExpirationCache[shortURL]
 	if ok {
 		delete(r.timeExpirationCache, shortURL)
-		return true, t
+		return t, true
 	} else {
-		return false, 0
+		return 0, false
 	}
 }
 
