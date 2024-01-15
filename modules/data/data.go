@@ -105,7 +105,10 @@ func (r *redirect) RemovingDBMapping(time int64) []Mapping {
 	r.l.Lock()
 	defer r.l.Unlock()
 	data, _ := r.db.getRemove(time)
-	_ = r.db.autoRemove(time)
+	err := r.db.autoRemove(time)
+	if err != nil {
+		utils.Logger.Warning(err)
+	}
 	return data
 }
 
