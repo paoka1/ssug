@@ -48,10 +48,6 @@ func (d *database) open() (*sql.DB, error) {
 	return db, nil
 }
 
-func (d *database) close() {
-	_ = d.db.Close()
-}
-
 // 向数据库添加短链映射
 func (d *database) addMapping(m Mapping) error {
 	insSQL := "INSERT INTO %s VALUES (?, ?, ?);"
@@ -122,9 +118,13 @@ func (d *database) hasOriginalURL(originalURL string) bool {
 	if rows.Err() != nil {
 		return false
 	}
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
 	if !rows.Next() {
 		return false
 	}
+	_ = rows.Close()
 	return true
 }
 
@@ -145,9 +145,13 @@ func (d *database) hasShortURL(shortURL string) bool {
 	if rows.Err() != nil {
 		return false
 	}
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
 	if !rows.Next() {
 		return false
 	}
+	_ = rows.Close()
 	return true
 }
 
@@ -172,6 +176,9 @@ func (d *database) getRemove(time int64) ([]Mapping, error) {
 		_ = rows.Scan(&m.ShortURL, &m.OriginalURL, &m.ExpirationTime)
 		ms = append(ms, m)
 	}
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
 	return ms, nil
 }
 

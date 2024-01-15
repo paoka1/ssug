@@ -20,7 +20,6 @@ func init() {
 func Main() {
 	p := base.ParsePara()
 	data.Redirect.Init(p.Key, p.TTL)
-	defer data.Redirect.Close()
 	base2.RemoveExp()
 	base2.SetInitLen(p.InitLen)
 

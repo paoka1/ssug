@@ -49,10 +49,6 @@ func (r *redirect) GetKey() string {
 	return r.accessKey
 }
 
-func (r *redirect) Close() {
-	r.db.close()
-}
-
 // AddMapping 添加新的映射
 func (r *redirect) AddMapping(originalURL string, shortURL string) (Mapping, error) {
 	r.l.Lock()
