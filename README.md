@@ -1,6 +1,6 @@
 ## SSUG
 
-Shauio's short URL generator，短链接服务API，使用Golang实现，使用SQLite持久化数据
+Shauio's Short URL Generator，使用Golang实现的短链生成器，使用SQLite持久化数据
 
 ### 使用SSUG
 
