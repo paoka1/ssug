@@ -40,7 +40,7 @@ func (r *redirect) Init(key string, ttl int64) {
 	r.db.db = d
 	utils.Logger.Info("成功加载数据库")
 	if base.Debug {
-		utils.Logger.Info("数据库路径：" + r.db.path)
+		utils.Logger.Debug("数据库路径：" + r.db.path)
 	}
 }
 
@@ -53,6 +53,9 @@ func (r *redirect) GetKey() string {
 func (r *redirect) AddMapping(originalURL string, shortURL string) (Mapping, error) {
 	r.l.Lock()
 	defer r.l.Unlock()
+	if base.Debug {
+		defer r.PrintRedirect()
+	}
 	su, ok := r.redirectCache[originalURL]
 	if ok {
 		t, _ := r.timeExpirationCache[su]
@@ -125,10 +128,13 @@ func (r *redirect) GetMappingFO(originalURL string) (Mapping, error) {
 func (r *redirect) GetMappingO(shortURL string) (string, error) {
 	r.l.Lock()
 	defer r.l.Unlock()
+	if base.Debug {
+		defer r.PrintRedirect()
+	}
 	for ou, su := range r.redirectCache {
 		if su == shortURL {
 			if base.Debug {
-				utils.Logger.Info(fmt.Sprintf("从缓存查找到%s -> %s", su, ou))
+				utils.Logger.Debug(fmt.Sprintf("从缓存查找到%s -> %s", su, ou))
 			}
 			return ou, nil
 		}
@@ -141,7 +147,7 @@ func (r *redirect) GetMappingO(shortURL string) (string, error) {
 		r.timeExpirationCache[m.ShortURL] = m.ExpirationTime
 		r.redirectCache[m.OriginalURL] = m.ShortURL
 		if base.Debug {
-			utils.Logger.Info(fmt.Sprintf("从数据库查找到%s -> %s", m.ShortURL, m.OriginalURL))
+			utils.Logger.Debug(fmt.Sprintf("从数据库查找到%s -> %s", m.ShortURL, m.OriginalURL))
 		}
 		return m.OriginalURL, nil
 	}
@@ -202,4 +208,10 @@ func (r *redirect) GetCacheTimeMapping(shortURL string) int64 {
 	defer r.l.Unlock()
 	v, _ := r.timeExpirationCache[shortURL]
 	return v
+}
+
+// PrintRedirect 打印 redirect 当前的状态
+func (r *redirect) PrintRedirect() {
+	utils.Logger.Debug("短链缓存：", r.redirectCache)
+	utils.Logger.Debug("到期时间缓存：", r.timeExpirationCache)
 }

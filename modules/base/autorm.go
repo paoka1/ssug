@@ -31,14 +31,14 @@ func remove() {
 			_, _ = data.Redirect.RemoveRCacheMapping(ou)
 			_, _ = data.Redirect.RemoveTCacheMapping(su)
 			if base.Debug {
-				utils.Logger.Info(fmt.Sprintf("移除缓存映射%s -> %s，存活时间结束", su, ou))
+				utils.Logger.Debug(fmt.Sprintf("移除缓存映射%s -> %s，存活时间结束", su, ou))
 			}
 		}
 	}
 	dataRm := data.Redirect.RemovingDBMapping(tn)
 	for _, m := range dataRm {
 		if base.Debug {
-			utils.Logger.Info(fmt.Sprintf("移除数据库映射%s -> %s，存活时间结束", m.ShortURL, m.OriginalURL))
+			utils.Logger.Debug(fmt.Sprintf("移除数据库映射%s -> %s，存活时间结束", m.ShortURL, m.OriginalURL))
 		} else {
 			utils.Logger.Info(fmt.Sprintf("移除映射%s -> %s，存活时间结束", m.ShortURL, m.OriginalURL))
 		}

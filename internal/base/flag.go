@@ -2,6 +2,7 @@ package base
 
 import (
 	"flag"
+	"github.com/sirupsen/logrus"
 	"ssug/internal/utils"
 	"strconv"
 )
@@ -29,8 +30,9 @@ func ParsePara() Para {
 	flag.Parse()
 
 	if *d {
+		utils.Logger.SetLevel(logrus.DebugLevel)
 		Debug = true
-		utils.Logger.Info("已开启debug模式")
+		utils.Logger.Debug("已开启debug模式")
 	}
 	return Para{
 		Host:     *host,

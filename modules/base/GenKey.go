@@ -40,7 +40,7 @@ func GenValue(originalURL string) string {
 		timesTotal++
 	}
 	if base.Debug {
-		utils.Logger.Info(fmt.Sprintf("生成%s，短链：%s，长度：%d，消耗次数：%d", originalURL, md5[:nowLen], nowLen, timesTotal))
+		utils.Logger.Debug(fmt.Sprintf("生成%s，短链：%s，长度：%d，消耗次数：%d", originalURL, md5[:nowLen], nowLen, timesTotal))
 	}
 	return md5[:nowLen]
 }
