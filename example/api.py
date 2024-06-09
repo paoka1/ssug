@@ -43,7 +43,7 @@ class SSUG:
             "url": url
         }
         r = requests.post(urljoin(self.__service_url, "add"), data=data)
-        if r.status_code != 200 and r.json()["data"] == "":
+        if r.status_code != 200 and r.json()["data"]["short_url"] == "":
             raise Exception("获取短链接失败：" + r.json()["msg"])
         return r.json()["data"]
 
