@@ -7,9 +7,6 @@ import (
 )
 
 func IsURL(s string) bool {
-	if s == "" {
-		return false
-	}
 	urlRegex := regexp.MustCompile(`^(https?|http)://[^\s/$.?#].\S*$`)
 	return urlRegex.MatchString(s)
 }
